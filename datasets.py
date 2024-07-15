@@ -304,18 +304,19 @@ class EncodecMAEDataModule(LightningDataModule):
         self.args = args
 
     def setup(self, stage: str = None) -> None:
-        df = read_audiodir(self.args.dataset.audio_dir, dataset='emo', subsample=None, cache_dict_path=self.args.dataset.cache)
-        df = remove_long_audios(df, limit=self.args.dataset.filter_audio_length)
-        partitions = dataset_random_split(df, proportions={'train':-1,'validation':self.args.dataset.val_set_size})
-        datasets = {}
-        for k, v in partitions.items():
-            datasets[k] = DictDataset(
-                v, 
-                out_cols=['wav'], 
-                preprocessors=[partial(ProcessorReadAudio, input='filename', output='wav', max_length=self.args.dataset.max_audio_length)], 
-                index_mapper=partial(compensate_lengths, chunk_length=self.args.dataset.max_audio_length)
-            )
-        self.datasets = datasets
+        if stage == 'fit':
+            df = read_audiodir(self.args.dataset.audio_dir, dataset='emo', subsample=None, cache_dict_path=self.args.dataset.cache)
+            df = remove_long_audios(df, limit=self.args.dataset.filter_audio_length)
+            partitions = dataset_random_split(df, proportions={'train':-1,'validation':self.args.dataset.val_set_size})
+            datasets = {}
+            for k, v in partitions.items():
+                datasets[k] = DictDataset(
+                    v, 
+                    out_cols=['wav'], 
+                    preprocessors=[partial(ProcessorReadAudio, input='filename', output='wav', max_length=self.args.dataset.max_audio_length)], 
+                    index_mapper=partial(compensate_lengths, chunk_length=self.args.dataset.max_audio_length)
+                )
+            self.datasets = datasets
 
     def train_dataloader(self):
         return DataLoader(

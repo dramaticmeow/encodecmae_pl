@@ -1,6 +1,6 @@
 seed: 1435
 total_steps: 500000
-ckpt_interval: 50000
+ckpt_interval: 5000
 
 dataset:
   audio_dir: "/data41/private/dongyuanliang/emo/sr24_50up"
@@ -24,8 +24,8 @@ loss:
   quantizer_weights: [0.22407463, 0.1759858, 0.14499009, 0.12150037, 0.10315603, 0.08831368, 0.07608274, 0.06589669]
 
 transformer:
-  dim: 768
-  enc_num_layers: 10
+  dim: 1024
+  enc_num_layers: 20
   enc_num_heads: 12
   dec_num_layers: 2
   dec_num_heads: 12

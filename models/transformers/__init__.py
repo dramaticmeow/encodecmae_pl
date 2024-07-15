@@ -201,13 +201,13 @@ class TransformerEncoder(nn.Module):
             activations.append(x[0])
         return activations
 
-    @torch.compile
-    def compiled_run_through_encoder(self,x):
-        return self.run_through_encoder(x)
+    # @torch.compile
+    # def compiled_run_through_encoder(self,x):
+    #     return self.run_through_encoder(x)
 
-    @torch.compile
-    def compiled_get_activations(self,x):
-        return self.extract_activations(x)
+    # @torch.compile
+    # def compiled_get_activations(self,x):
+    #     return self.extract_activations(x)
 
     def get_activations(self,x, padding_mask):
         if self.positional_encoder is not None:

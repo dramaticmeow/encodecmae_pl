@@ -4,7 +4,7 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import Callback
 from pytorch_lightning.callbacks import TQDMProgressBar, LearningRateMonitor, ModelCheckpoint
-
+import torchinfo
 from models.builder import build_EncodecMAE
 from datasets import EncodecMAEDataModule
 import os, logging
@@ -44,7 +44,7 @@ def main():
     print(f'Seed: {seed}')
 
     model = build_EncodecMAE(train_args)
-
+    # print(torchinfo.summary(model))
     # # Train the model
     # if MODEL_CKPT is not None:
     #     model = model.load_from_checkpoint(f'./encodecMAE/{MODEL_CKPT}', map_location='cpu')
@@ -70,7 +70,7 @@ def main():
     )
 
     dm = EncodecMAEDataModule(train_args)
-    dm.setup()
+    # dm.setup()
     if TRAIN_CKPT is not None:
         trainer.fit(model, datamodule=dm, ckpt_path=f'./encodecMAE/{TRAIN_CKPT}')
     else:

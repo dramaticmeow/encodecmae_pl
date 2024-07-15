@@ -23,8 +23,8 @@ def build_EncodecMAE(args):
     # convert to partial
     attn_enc = partial(MultiHeadAttention, model_dim=args.transformer.dim, num_heads=args.transformer.enc_num_heads)
     attn_dec = partial(MultiHeadAttention, model_dim=args.transformer.dim, num_heads=args.transformer.dec_num_heads)
-    trans_enc = partial(TransformerEncoder, model_dim=args.transformer.dim, num_layers=args.transformer.enc_num_layers, attention_layer=attn_enc)
-    trans_dec = partial(TransformerEncoder, model_dim=args.transformer.dim, num_layers=args.transformer.dec_num_layers, attention_layer=attn_dec)
+    trans_enc = partial(TransformerEncoder, model_dim=args.transformer.dim, num_layers=args.transformer.enc_num_layers, attention_layer=attn_enc, compile=False)
+    trans_dec = partial(TransformerEncoder, model_dim=args.transformer.dim, num_layers=args.transformer.dec_num_layers, attention_layer=attn_dec, compile=False)
 
     ret = EncodecMAE(
         wav_encoder=EncodecEncoder,
