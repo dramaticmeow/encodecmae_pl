@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import TQDMProgressBar, LearningRateMonitor, Mo
 from models.builder import build_EncodecMAE
 from datasets import EncodecMAEDataModule
 import os, logging
-RUN = 'encodecmae_base'
+RUN = os.getenv('ENCODECMAE_RUN')
 print(f'Running: {RUN}')
 
 PROJECT_NAME = 'encodecMAE'
