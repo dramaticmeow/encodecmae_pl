@@ -12,7 +12,8 @@ echo "NNODES=${NNODES}"
 echo "NODE_RANK=${NODE_RANK}"
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT --rdzv_id=pytorchddp --rdzv_backend=c10d --rdzv_endpoint=${MASTER_ADDR}:${MASTER_PORT} "
 
-cat /home/dongyuanliang/.netrc
+# be sure to set ~/.netrc
+cat ~/.netrc
 export ENCODECMAE_RUN='encodecmae_base'
-torchrun $DISTRIBUTED_ARGS trainer.py 2>&1 | tee -a train_log_${MUSICGEN_RUN}_${NODE_RANK}.txt
+torchrun $DISTRIBUTED_ARGS trainer.py 2>&1 | tee -a train_log_${ENCODECMAE_RUN}_${NODE_RANK}.txt
 tail -f /dev/null
