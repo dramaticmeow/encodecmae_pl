@@ -1,0 +1,41 @@
+world_size: 8
+seed: 1435
+total_steps: 500000
+ckpt_interval: 50000
+
+dataset:
+  audio_dir: "/data41/private/dongyuanliang/emo/sr24_50up"
+  cache: "/data41/private/dongyuanliang/emo/emo50up-26w-sr24k.jsonl"
+  filter_audio_length: 10000
+  max_audio_length: 4
+  val_set_size: 200
+  train_batch_size: 32
+  val_batch_size: 8
+  train_num_workers: 8
+  val_num_workers: 4
+  grad_acc: 1
+
+optim:
+  max_lr: 0.0001
+  beta1: 0.9
+  beta2: 0.95
+  weight_decay: 0.05
+loss:
+  masked_weight: 0.9
+  quantizer_weights: [0.22407463, 0.1759858, 0.14499009, 0.12150037, 0.10315603, 0.08831368, 0.07608274, 0.06589669]
+
+transformer:
+  dim: 768
+  enc_num_layers: 10
+  enc_num_heads: 12
+  dec_num_layers: 2
+  dec_num_heads: 12
+
+quantizer:
+  num_encodec_targets: 8
+target:
+  num_heads: 8
+  num_tokens: 1024
+masking:
+  prop: 0.5
+  gap_size: 15
