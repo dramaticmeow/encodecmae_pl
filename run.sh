@@ -14,5 +14,5 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $
 
 cat /home/dongyuanliang/.netrc
 export ENCODECMAE_RUN='encodecmae_base'
-/2214/conda_envs/musicgen/bin/torchrun $DISTRIBUTED_ARGS trainer.py 2>&1 | tee -a train_log_${MUSICGEN_RUN}_${NODE_RANK}.txt
+torchrun $DISTRIBUTED_ARGS trainer.py 2>&1 | tee -a train_log_${MUSICGEN_RUN}_${NODE_RANK}.txt
 tail -f /dev/null
