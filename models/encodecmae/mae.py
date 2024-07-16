@@ -146,17 +146,17 @@ class EncodecMAE(pl.LightningModule):
     def training_step(self,x, batch_idx):
         x = self(x)
         losses = self.calculate_loss(x)
-        self.log_results(x,losses,'train')
+        self.log_dict({'{}/{}'.format('train',k): v for k,v in losses.items()}, prog_bar=True, on_step=True, on_epoch=False, logger=True)
 
         return losses['loss']
 
     def validation_step(self,x, batch_idx):
         x = self(x)
         losses = self.calculate_loss(x)
-        self.log_results(x,losses,'val')
-        
-    def log_results(self,x,losses,prefix):
-        self.log_dict({'{}_{}'.format(prefix,k): v for k,v in losses.items()}, prog_bar=True, on_step=True, on_epoch=False, logger=True)
+        self.log_dict({'{}/{}'.format('val',k): v for k,v in losses.items()}, prog_bar=True, on_step=False, on_epoch=True, logger=True, sync_dist=True)
+        return losses['loss']
+    # def log_results(self,x,losses,prefix):
+    #     self.log_dict({'{}_{}'.format(prefix,k): v for k,v in losses.items()}, prog_bar=True, on_step=True, on_epoch=False, logger=True)
 
     def set_optimizer_state(self, state):
         self.opt_state = state

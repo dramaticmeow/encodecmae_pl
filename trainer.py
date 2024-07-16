@@ -63,7 +63,7 @@ def main():
         check_val_every_n_epoch=None,
         # gradient_clip_val=1.0,
         # plugins=[MyClusterEnvironment()],
-        callbacks=[GradNormCallback(), LearningRateMonitor(), ModelCheckpoint(dirpath=f'./encodecMAE/{RUN}', every_n_train_steps=train_args.ckpt_interval, save_top_k=-1)],
+        callbacks=[TQDMProgressBar(refresh_rate=50), GradNormCallback(), LearningRateMonitor(), ModelCheckpoint(dirpath=f'./encodecMAE/{RUN}', every_n_train_steps=train_args.ckpt_interval, save_top_k=-1)],
         # barebones=True,
         # profiler='simple',
         # enable_progress_bar=False
