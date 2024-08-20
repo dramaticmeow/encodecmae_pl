@@ -1,1 +1,1 @@
-from .encodecmae import EncodecMAE
+from .mae import EncodecMAE

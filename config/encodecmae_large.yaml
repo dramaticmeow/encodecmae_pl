@@ -23,6 +23,9 @@ loss:
   masked_weight: 0.9
   quantizer_weights: [0.22407463, 0.1759858, 0.14499009, 0.12150037, 0.10315603, 0.08831368, 0.07608274, 0.06589669]
 
+wav_encoder:
+  wav_feature_dim: 128
+
 transformer:
   dim: 1024
   enc_num_layers: 20

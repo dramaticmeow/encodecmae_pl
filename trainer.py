@@ -12,9 +12,9 @@ RUN = os.getenv('ENCODECMAE_RUN')
 print(f'Running: {RUN}')
 
 PROJECT_NAME = 'encodecMAE'
-MODEL_CKPT = None #'nowcqbo0/checkpoints/epoch=0-step=112000.ckpt'
-WANDB_RESUME =  None # 'nowcqbo0' #'uuu83nkt' #'r4x28884'
-TRAIN_CKPT =  None #f'{WANDB_RESUME}/checkpoints/epoch=0-step=112000.ckpt'
+WANDB_RESUME = RUN # 'nowcqbo0' #'uuu83nkt' #'r4x28884'
+MODEL_CKPT = None # f'{WANDB_RESUME}/epoch=4-step=500000.ckpt' #'nowcqbo0/checkpoints/epoch=0-step=112000.ckpt'
+TRAIN_CKPT =  None # f'{WANDB_RESUME}/epoch=4-step=500000.ckpt'
 
 import os
 
@@ -46,8 +46,8 @@ def main():
     model = build_EncodecMAE(train_args)
     # print(torchinfo.summary(model))
     # # Train the model
-    # if MODEL_CKPT is not None:
-    #     model = model.load_from_checkpoint(f'./encodecMAE/{MODEL_CKPT}', map_location='cpu')
+    if MODEL_CKPT is not None:
+        model = model.load_from_checkpoint(f'./encodecMAE/{MODEL_CKPT}', map_location='cpu')
     
     wandb_logger = WandbLogger(project=PROJECT_NAME, name=RUN, id=WANDB_RESUME)
 
