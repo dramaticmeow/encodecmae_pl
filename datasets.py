@@ -10,82 +10,38 @@ import torch
 import re, random
 from pytorch_lightning import LightningDataModule
 from functools import partial
+from typing import Dict, List, Callable, Any, Optional, Union, Type
+from processors import SequentialProcessor, ReadAudioProcessor, MelspectrogramProcessor
 
 
-def ProcessorReadAudio(x,
-                       state,
-                       input=None,
-                       output=None,
-                       max_length=None,
-                       mono=True
-):  
-    def read_sample(x,state,max_length,mono):
-        if max_length is not None:
-            audio_info = sf.info(x[input])
-            desired_frames = int(max_length*audio_info.samplerate)
-            total_frames = audio_info.frames
-            if total_frames > desired_frames:
-                start = random.randint(0,total_frames - desired_frames)
-                stop = start + desired_frames
-            else:
-                start = 0
-                stop = None
-            if 'chunk_idx' in state:
-                #This is for ordered reading in chunks when doing evals
-                start = int(state['chunk_idx']*desired_frames)
-                stop = start + desired_frames
-        else:
-            start = 0
-            stop = None
-        if 'start' in x:
-            start = x['start']
-        if 'stop' in x:
-            stop = x['stop']
-        x['start'] = start
-        x['stop'] = stop
-        wav, fs = sf.read(x[input], start=start, stop=stop, dtype=np.float32)
-        if (wav.ndim == 2) and mono:
-            wav = np.mean(wav,axis=-1)
-        return wav
-    try:
-        wav = read_sample(x, state, max_length, mono)
-    except:
-        print('Failed reading {}'.format(x))
-        wav = None
-    if output is None:
-        output = input
-    x[output] = wav
-    
-    return x, state
 
-def ProcessorLoadNumpy(x, state, input, output):
-    x[output] = np.load(x[input])
-    return x,state
+def read_audiodir(dataset_path: List[str], 
+                  subsample: Optional[int] = None, 
+                  dataset: Optional[str] = None, 
+                  regex_groups: Optional[str] = None, 
+                  filter_list: Optional[str] = None, 
+                  partition_lists: Optional[Dict[str, Optional[str]]] = None, 
+                  filter_mode: str = 'include', 
+                  cache_dict_path: str = None) -> pd.DataFrame:
+    """
+    Reads audio files from directories and generates metadata DataFrame.
 
-# def load_dataset(state, reader_fn, 
-#                  cache=True, 
-#                  filters=[], 
-#                  key_out='dataset_metadata',
-#                  rename=None):
-    
-#     if not (cache and key_out in state):
-#         if not isinstance(reader_fn, list):
-#             reader_fn = [reader_fn]
-#         dfs = [fn() for fn in reader_fn]
-#         df = pd.concat(dfs).reset_index()
-#         state[key_out] = df
-#     else:
-#         logger.info('Caching dataset metadata from state')
-    
-#     for f in filters:
-#         state[key_out] = f(state[key_out])
-#     if rename is not None:
-#         for r in rename:
-#             state[key_out][r['column']] = state[key_out][r['column']].apply(lambda x: r['new_value'] if x == r['value'] else x)
-    
-#     return state
+    Args:
+        dataset_path (list): List of paths to directories containing audio files.
+        subsample (int, optional): Number of files to subsample. Defaults to None.
+        dataset (str, optional): Name of the dataset. Defaults to None.
+        regex_groups (str, optional): Regular expression to extract metadata from filenames. Defaults to None.
+        filter_list (str, optional): Path to a file containing a list of filenames to filter. Defaults to None.
+        partition_lists (dict, optional): Dictionary mapping partitions to filenames. Defaults to None.
+        filter_mode (str, optional): Filtering mode, either 'include' or 'discard'. Defaults to 'include'.
 
-def read_audiodir(dataset_path, subsample=None, dataset=None, regex_groups=None, filter_list=None, partition_lists=None,filter_mode='include', cache_dict_path=None):
+    Returns:
+        pandas.DataFrame: Metadata DataFrame containing information about audio files.
+
+    Raises:
+        Exception: If an unrecognized filter mode is provided.
+    """
+
     if not isinstance(dataset_path, list):
         dataset_path = [dataset_path]
     all_files = []
@@ -162,29 +118,26 @@ def read_audiodir(dataset_path, subsample=None, dataset=None, regex_groups=None,
         df = df.drop('rel_path', axis=1)
     return df
 
-# def get_dataloaders(state, split_function=None, 
-#                            dataset_cls=None, 
-#                            dataloader_cls=None, 
-#                            dataset_key_in='dataset_metadata',
-#                            dataset_key_out='datasets',
-#                            partitions_key_out='partitions',
-#                            dataloaders_key_out='dataloaders'):
-
-#     if split_function is not None:
-#         partitions = split_function(state[dataset_key_in])
-#     else:
-#         partitions = {'train': state[dataset_key_in]}
-
-#     datasets = {k: dataset_cls[k](v, state) for k,v in partitions.items() if k in dataset_cls}
-#     dataloaders = {k: dataloader_cls[k](v) for k,v in datasets.items() if k in dataloader_cls}
-
-#     state[partitions_key_out] = partitions
-#     state[dataset_key_out] = datasets
-#     state[dataloaders_key_out] = dataloaders
-
-#     return state
     
-def dataset_random_split(df, proportions={}):
+def dataset_random_split(df: pd.DataFrame, 
+                         proportions: Dict[str, float] = {}) -> Dict[str, pd.DataFrame]:
+    """
+    Splits a DataFrame into partitions randomly based on given proportions.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame to be split.
+        proportions (dict, optional): Dictionary containing proportions of split for each partition. 
+            If value is greater than 1, it's treated as the number of samples to include in the partition. 
+            If value is between 0 and 1, it's treated as the proportion of the DataFrame to include in the partition.
+            If -1 is provided for any partition, remaining samples will be assigned to this partition.
+            Defaults to an empty dictionary.
+
+    Returns:
+        dict: Dictionary containing partitions as DataFrames.
+
+    Raises:
+        Exception: If -1 is used in more than one entry in the proportions dictionary.
+    """
     idxs = df.index
     prop_type = [v for k,v in proportions.items() if v>1]
     if len(prop_type)>0:
@@ -214,7 +167,16 @@ def remove_long_audios(df, limit=10000):
     df = df.loc[df['duration']<limit]
     return df
 
-def dynamic_pad_batch(x):
+def dynamic_pad_batch(x: Union[list, Dict[str, Any]]) -> Dict[str, torch.Tensor]:
+    """
+    Dynamically pads a batch of sequences with variable lengths and converts them to PyTorch tensors.
+
+    Args:
+        x (Union[list, dict]): List or dictionary containing sequences to be padded.
+
+    Returns:
+        dict: Dictionary containing padded sequences converted to PyTorch tensors.
+    """
     def not_discarded(x):
         if x is None:
             return False
@@ -260,7 +222,23 @@ def dynamic_pad_batch(x):
 
     return batch
 
-def compensate_lengths(df, chunk_length=None):
+def compensate_lengths(df: pd.DataFrame, chunk_length: Optional[float] = None) -> List[int]:
+    """
+    Compensates for varying lengths of elements in a DataFrame.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame containing elements with varying lengths.
+        chunk_length (float, optional): The length of each chunk in seconds. 
+            If provided, elements will be divided into chunks of approximately equal length. 
+            Defaults to None.
+
+    Returns:
+        list: A list of indices corresponding to elements in the DataFrame, accounting for varying lengths.
+
+    Note:
+        If chunk_length is not provided, each element is represented by a single index.
+        If chunk_length is provided, elements are divided into chunks, and each chunk is represented by its element's index.
+    """
     if chunk_length is not None:
         map_idx = []
         for i, (idx, row) in enumerate(df.iterrows()):
@@ -270,13 +248,28 @@ def compensate_lengths(df, chunk_length=None):
         return list(range(len(df)))
 
 class DictDataset(Dataset):
-    def __init__(self, metadata, out_cols, preprocessors=None, index_mapper=None):
+    """
+    Dataset class to handle data stored in a dictionary-like format.
+
+    Args:
+        metadata (pandas.DataFrame): DataFrame containing metadata of the dataset.
+        state (dict): Dictionary containing additional state information.
+        out_cols (list): List of columns to be included in the output.
+        preprocessor (optional): Callable to apply to a dataframe row before returning the item. Defaults to None.
+        index_mapper (callable, optional): A function to map indices of metadata. Defaults to None.
+        state_keys (list, optional): List of keys from the state dictionary to be included in the dataset's state. Defaults to None.
+    """
+    def __init__(self, 
+                 metadata: pd.DataFrame, 
+                 out_cols: List[str], 
+                 preprocessor: Callable[[Any, Dict[str, Any]], Any] = None, 
+                 index_mapper: Optional[Callable[[pd.DataFrame], List[int]]] = None):
+
         self._metadata = metadata
         self._out_cols = out_cols
         self._state = {}
         self._state['metadata'] = metadata
-
-        self._preprocessors = preprocessors
+        self._preprocessor = preprocessor()
         if index_mapper is not None:
             self._idx_map = index_mapper(self._metadata)
         else:
@@ -284,19 +277,14 @@ class DictDataset(Dataset):
 
     def __getitem__(self, idx):
         row = copy.deepcopy(self._metadata.iloc[self._idx_map[idx]])
-        for p in self._preprocessors:
-            row, self._state = p(row, self._state)
+        if self._preprocessor is not None:
+            row = self._preprocessor(row)
         out = {k: row[k] for k in self._out_cols}
         return out
 
     def __len__(self):
         return len(self._idx_map)
 
-# def read_selflearning_dataset(dataset_path):
-#     df = pd.read_csv(Path(dataset_path, 'metadata_selftrain_dataset.csv'), names=['start','stop','filename'])
-#     df = df.reset_index()
-#     df = df.rename({'index':'filename_audio','filename':'filename_targets'},axis=1)
-#     return df
 
 class EncodecMAEDataModule(LightningDataModule):
     def __init__(self, args):
@@ -309,11 +297,20 @@ class EncodecMAEDataModule(LightningDataModule):
             df = remove_long_audios(df, limit=self.args.dataset.filter_audio_length)
             partitions = dataset_random_split(df, proportions={'train':-1,'validation':self.args.dataset.val_set_size})
             datasets = {}
+            read_audio_proc= partial(ReadAudioProcessor, key_in='filename', key_out='wav', max_length=self.args.dataset.max_audio_length)
+            if self.args.input == 'encodec':
+                out_cols = ['wav']
+                preprocessor = partial(SequentialProcessor, processors=[read_audio_proc])
+            elif self.args.input == 'mel':
+                out_cols = ['wav', 'wav_features']
+                mel_spec_proc = partial(MelspectrogramProcessor, key_in='wav', key_out='wav_features', sample_frequency=self.args.wav_encoder.fs, frame_shift=self.args.mel.frame_shift, frame_length=self.args.mel.frame_length, htk_compat=True, use_energy=False, window_type=self.args.mel.window_type, num_mel_bins=self.args.mel.num_bins, dither=0.0, norm_stats=[self.args.mel.mean, self.args.mel.std])
+                preprocessor = partial(SequentialProcessor, processors=[read_audio_proc, mel_spec_proc])
+            
             for k, v in partitions.items():
                 datasets[k] = DictDataset(
                     v, 
-                    out_cols=['wav'], 
-                    preprocessors=[partial(ProcessorReadAudio, input='filename', output='wav', max_length=self.args.dataset.max_audio_length)], 
+                    out_cols=out_cols, 
+                    preprocessor=preprocessor, 
                     index_mapper=partial(compensate_lengths, chunk_length=self.args.dataset.max_audio_length)
                 )
             self.datasets = datasets

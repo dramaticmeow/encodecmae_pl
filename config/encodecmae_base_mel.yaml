@@ -1,6 +1,6 @@
 seed: 1435
 total_steps: 500000
-ckpt_interval: 5000
+ckpt_interval: 10000
 
 dataset:
   audio_dir: "/2214/datasets/massive/emo/sr24_50up"
@@ -25,12 +25,21 @@ loss:
 
 wav_encoder:
   wav_feature_dim: 128
+  hop_length: 320
+  fs: 24000
 
-input: "encodec"
+input: "mel"
+mel:
+  num_bins: 256
+  frame_shift: 13.28
+  frame_length: 26.56
+  window_type: 'hanning'
+  mean: 0.0
+  std: 1.0
 
 transformer:
-  dim: 1024
-  enc_num_layers: 20
+  dim: 768
+  enc_num_layers: 10
   enc_num_heads: 12
   dec_num_layers: 2
   dec_num_heads: 12

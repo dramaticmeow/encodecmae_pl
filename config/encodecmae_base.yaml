@@ -26,6 +26,8 @@ loss:
 wav_encoder:
   wav_feature_dim: 128
 
+input: "encodec"
+
 transformer:
   dim: 768
   enc_num_layers: 10

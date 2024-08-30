@@ -1,10 +1,10 @@
 seed: 1435
-total_steps: 500000
-ckpt_interval: 5000
+total_steps: 1000000
+ckpt_interval: 10000
 
 dataset:
-  audio_dir: "/2214/datasets/massive/emo/sr24_50up"
-  cache: "/2214/datasets/massive/emo/emo50up-26w-sr24k.jsonl"
+  audio_dir: "/2214/datasets/massive/emo/sr24"
+  cache: "/2214/datasets/massive/emo/emo15up-100w-sr24k.jsonl"
   filter_audio_length: 10000
   max_audio_length: 4
   val_set_size: 200
