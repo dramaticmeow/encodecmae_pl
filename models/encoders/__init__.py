@@ -2,7 +2,7 @@ import torch.nn as nn
 from encodec import EncodecModel
 import encodec
 import torch
-
+from audiocraft.solvers import CompressionSolver
 class WavEncoder(torch.nn.Module):
     def __init__(self, encoder, pre_net=None, post_net=None, 
                  key_in='wav', key_out='wav_features', key_lens='wav_lens',
@@ -41,7 +41,7 @@ class WavEncoder(torch.nn.Module):
             x['feature_padding_mask'] = x['features_len'][:,None] <= torch.arange(0,y.shape[1],device=y.device)[None,:]
             
 class EncodecEncoder(torch.nn.Module):
-    def __init__(self, frozen: bool = True, scale: float = 1.0, pretrained: bool = True) -> None:
+    def __init__(self, frozen: bool = True, scale: float = 1.0, pretrained: bool = True, args = None) -> None:
         """Initialize Encodec Encoder model.
 
         Args:
@@ -50,15 +50,20 @@ class EncodecEncoder(torch.nn.Module):
             pretrained (bool, optional): Whether to load a pretrained checkpoint or train from scratch. Defaults to True.
         """
         super().__init__()
-        self.model = EncodecModel.encodec_model_24khz(pretrained=pretrained).encoder
+        if args.wav_encoder.ckpt_path is not None:
+            print('load audiocraft pretrained encodec from: ', args.wav_encoder.ckpt_path)
+            self.model = CompressionSolver.model_from_checkpoint(args.wav_encoder.ckpt_path).encoder
+        else:
+            print('load init encodec: 24000, 75hz')
+            self.model = EncodecModel.encodec_model_24khz(pretrained=pretrained).encoder
         self.hop_length = self.model.hop_length
         self.frozen = frozen
         if self.frozen:
             self.model.eval()
         else:
             self.model.train()
-        self.out_dim = 128
-        self.fs = 24000
+        self.out_dim = args.wav_encoder.wav_feature_dim
+        self.fs = args.wav_encoder.fs
         self.scale = scale
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -78,33 +83,3 @@ class EncodecEncoder(torch.nn.Module):
             y = self.model(x)
         y = torch.permute(y,(0,2,1))*self.scale
         return y
-
-class SEANetEncoder(torch.nn.Module):
-    def __init__(self, frozen=False, lstm=False, pretrained=True):
-        super().__init__()
-        self.model = encodec.modules.SEANetEncoder(lstm=lstm)
-        if pretrained:
-            ckpt_path = 'https://dl.fbaipublicfiles.com/encodec/v0/encodec_24khz-d7cc33bc.th'
-            sd = torch.hub.load_state_dict_from_url(ckpt_path, map_location='cpu', check_hash=True)
-            sd = {k.replace('encoder.',''):v for k,v in sd.items()}
-            if not lstm:
-                sd = {k.replace('.15','.14'): v for k,v in sd.items()}
-            self.model.load_state_dict(sd, strict=False)
-        self.hop_length = self.model.hop_length
-        self.frozen = frozen
-        self.fs = 24000
-        if self.frozen:
-            self.model.eval()
-        else:
-            self.model.train()
-        self.out_dim = self.model.dimension
-
-    def forward(self, x):
-        x = x.unsqueeze(1)
-        if self.frozen:
-            with torch.no_grad():
-                y = self.model(x)
-        else:
-            y = self.model(x)
-        y = torch.permute(y,(0,2,1))
-        return y  

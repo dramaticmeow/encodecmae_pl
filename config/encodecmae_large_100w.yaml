@@ -35,8 +35,6 @@ transformer:
   dec_num_layers: 2
   dec_num_heads: 12
 
-quantizer:
-  num_encodec_targets: 8
 target:
   num_heads: 8
   num_tokens: 1024

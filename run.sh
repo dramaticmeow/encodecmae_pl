@@ -17,8 +17,8 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $
 
 # be sure to set ~/.netrc for wandb
 cat /2214/wandb.netrc > /root/.netrc
-export ENCODECMAE_RUN='encodecmae_large_100w'
+export ENCODECMAE_RUN='encodecmae_large_32khz_100w32kmusic_12s'
 export TORCH_HOME='/2214/torch'
 cd /2214/dongyuanliang/encodecmae_pl
-/2214/conda_envs/encodecmae/bin/torchrun $DISTRIBUTED_ARGS trainer.py 2>&1 | tee train_log_${ENCODECMAE_RUN}_${NODE_RANK}.txt
+/2214/conda_envs/encodecmae_audiocraft/bin/torchrun $DISTRIBUTED_ARGS trainer.py 2>&1 | tee train_log_${ENCODECMAE_RUN}_${NODE_RANK}.txt
 tail -f /dev/null

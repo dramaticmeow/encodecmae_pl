@@ -73,7 +73,7 @@ def read_audiodir(dataset_path: List[str],
                 p = obj['path']
                 meta = {}
                 meta['sr'] = obj['sample_rate']
-                meta['channels'] = obj['channels']
+                meta['channels'] = obj['channels'] if 'channels' in obj else 1
                 meta['frames'] = obj['sample_points']
                 meta['duration'] = obj['duration']
                 cache_dict[os.path.basename(p)] = meta
@@ -85,6 +85,7 @@ def read_audiodir(dataset_path: List[str],
                 metadata = cache_dict[basename]
                 metadata['filename'] = str(f.resolve())
             else:
+                print(f'miss {f} in cache file, reading meta...')
                 finfo = sf.info(f)
                 metadata = {'filename': str(f.resolve()),
                         'sr': finfo.samplerate,
@@ -203,7 +204,7 @@ def dynamic_pad_batch(x: Union[list, Dict[str, Any]]) -> Dict[str, torch.Tensor]
             if x.dtype in [np.float64, np.float32, np.float16, 
                         np.complex64, np.complex128, 
                         np.int64, np.int32, np.int16, np.int8,
-                        np.uint8, np.bool]:
+                        np.uint8, bool]:
 
                 return torch.from_numpy(x)
             else:

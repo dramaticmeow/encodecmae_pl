@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from datetime import datetime
 import gin
 import librosa
-
+from audiocraft.data.audio_utils import convert_audio
 import numpy as np
 
 class EncodecMAE(pl.LightningModule):
@@ -167,6 +167,62 @@ class EncodecMAE(pl.LightningModule):
             batch_processed.append(xin_i)
         xin = {k: torch.stack([to_torch(b[k]) for b in batch_processed]).to(self.device, self.dtype) for k in batch_processed[0].keys()}
         return xin
+
+    def extract_features_from_file_simple(self, filename, batch_size, frame_rate=50, train_length=4, min_length_ratio=0.5):
+        fs = self.wav_encoder.fs
+        audio, fs = librosa.load(filename, sr=fs, offset=None, duration=None)
+
+        chunk_size=int(fs*train_length)
+        min_length = int(chunk_size*min_length_ratio)
+
+        # hop_size = chunk_size
+        if not isinstance(audio, torch.Tensor):
+            audio = torch.tensor(audio, device=self.device, dtype=torch.float32)
+        assert audio.ndim == 1, 'Only single mono audio supported in simple mode'
+        # 计算音频长度
+        audio_len = audio.shape[0]
+        # final_time_step = int(audio_len / fs * frame_rate)
+        
+        # 计算需要的填充长度
+        if audio_len % chunk_size > min_length:
+            pad_len = chunk_size - (audio_len % chunk_size)
+        else:
+            pad_len = -(audio_len % chunk_size)
+        
+        # 对音频进行填充或截断
+        if pad_len > 0:
+            audio = torch.nn.functional.pad(audio, (0, pad_len))
+        elif pad_len < 0:
+            audio = audio[:pad_len]
+        
+        # 更新音频长度
+        audio_len = audio.shape[0]
+        
+        # 将音频分割成块
+        features = []
+        for start in range(0, audio_len, chunk_size * batch_size):
+            audio_chunk = audio[start:start + chunk_size * batch_size]
+            # 将音频块重塑为 (batch_size, chunk_size) 的形状
+            audio_chunk = audio_chunk.view(-1, chunk_size)
+            # print(audio_chunk.shape)
+            
+            # 处理音频块并提取特征
+            xin = {'wav': audio_chunk, 'wav_lens': torch.tensor([chunk_size] * audio_chunk.shape[0], dtype=self.dtype, device=self.device)}
+            out_i = self.extract_activations(xin)
+            activations = torch.stack(out_i['visible_embeddings_activations']) # the shape of activations is (num_layers, batch_size, timestep, dim)
+
+            # we retrive all layers!
+            activations = torch.permute(activations, (1, 2, 0, 3)).contiguous() # the shape of activations is (batch_size, timestep, num_layers, dim)
+            activations = activations.view(-1, activations.shape[-2], activations.shape[-1]).contiguous() # the shape of activations is (batch_size * timestep, num_layers, dim)
+            # print(activations.shape)
+            features.append(activations)
+
+        
+        # 将所有特征连接起来
+        features = torch.cat(features, dim=0) # the shape of features is (all_timestep, num_layers, dim)
+        # print(features.shape)
+        features = torch.permute(features, (1, 0, 2)).contiguous() # the shape of features is (num_layers, all_timestep, dim)
+        return features
 
     def extract_features_from_array(self, 
                                     audio, 
