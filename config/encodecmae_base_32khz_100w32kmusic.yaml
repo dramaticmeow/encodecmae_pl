@@ -1,0 +1,46 @@
+seed: 1435
+total_steps: 500000
+ckpt_interval: 10000
+
+dataset:
+  audio_dir: "/2214/datasets/massive/emo/sr32"
+  cache: "/2214/dongyuanliang/gettoken/100w-32k.jsonl"
+  filter_audio_length: 10000
+  max_audio_length: 4
+  val_set_size: 200
+  train_batch_size: 32
+  val_batch_size: 8
+  train_num_workers: 16
+  val_num_workers: 4
+  grad_acc: 1
+
+optim:
+  max_lr: 0.0001
+  beta1: 0.9
+  beta2: 0.95
+  weight_decay: 0.05
+loss:
+  masked_weight: 0.9
+  quantizer_weights: [0.22407463, 0.1759858, 0.14499009, 0.12150037]
+
+wav_encoder:
+  wav_feature_dim: 128
+  ckpt_path: "/2214/dongyuanliang/audiocraft_dongyuanliang/xps/8b237d6d/checkpoint.th"
+  hop_length: 640
+  fs: 32000
+
+input: "encodec"
+
+transformer:
+  dim: 768
+  enc_num_layers: 10
+  enc_num_heads: 12
+  dec_num_layers: 2
+  dec_num_heads: 12
+
+target:
+  num_heads: 4
+  num_tokens: 2048
+masking:
+  prop: 0.5
+  gap_size: 15
